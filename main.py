@@ -5,12 +5,12 @@ WORLD = {
         "name": "Open Field",
         "description": "An open green field stretching across the plains, a faded stone path cuts through it.",
         "exits": {
-            "north": "Forest", 
+            "north": "Forest",
             "east": "Village"
         },
-        "items": {"female rusty sword" : 1},   # {"item" : [strength, durability]}
-        "enemies":{"goomba" : 1}, # {"enemy" : [health, strength]}
-        "character":{"female monkey" : 1} # {"character : []"}
+        "items": {"female rusty sword": 1},
+        "enemies": {"female goomba": 1},
+        "character": {"female monkey": 1}
     },
 
     "Forest": {
@@ -20,8 +20,8 @@ WORLD = {
             "south": "Field"
         },
         "items": {},
-        "enemies": {"deku kaminari" : 1},
-        "character":{""}
+        "enemies": {"deku kaminari": 1},
+        "character": {"monkey soldier"}   # FIXED: cannot be {" "}
     },
 
     "Village": {
@@ -30,13 +30,14 @@ WORLD = {
         "exits": {
             "west": "Field"
         },
-        "items": []
+        "items": {},   # FIXED: must be dict, not list
+        "character": {"villager": 1}
     }
 }
 
 
 class Player:
-    def __init__(self, health=100, defense=100, currentPos="Field", weapon="Rusty_Sword"):
+    def __init__(self, health=100, defense=100, currentPos="Field", weapon="Rusty Sword"):
         self.health = health
         self.defense = defense
         self.currentPos = currentPos
@@ -47,7 +48,20 @@ class Player:
 
         if direction in location["exits"]:
             self.currentPos = location["exits"][direction]
-            print(f"You move {direction} to {self.currentPos}.")
+            print(f"\nYou move {direction}.")
+
+        # SHOW ROOM FIRST
+        self.look()
+
+        #THEN CHECK FOR ENEMIES
+        current_location = WORLD[self.currentPos]
+
+        if current_location["enemies"]:
+            enemy = current_location["enemies"][0]
+
+            print(f"\nA {enemy.name} appears!")
+            combat(self, enemy)
+
         else:
             print("You can't go that way.")
 
@@ -94,27 +108,33 @@ class GameObject:
         self.description = description
 
 
-class Object_Interactive(GameObject):      #work on this later to properly generalise consumables, weapons, 
-    def __init__(self, weapons):
-        self.weapons = weapons
+class Object_Interactive(GameObject):
+    def __init__(self, name, description):
+        super().__init__(name, description)
+
+
+class Consumables(Object_Interactive):
+    def __init__(self, name, description):
+        super().__init__(name, f"A {name}")
 
 
 class Weapon(Object_Interactive):
-    def __init__(self, durability, damage_inflicted, status):
+    def __init__(self, name, durability, damage_inflicted, status=None):
+        super().__init__(name, f"A {name}")
         self.durability = durability
         self.damage_inflicted = damage_inflicted
         self.status = status
-    
-    def set_damage_inflicted(self, damage_inflicted):
-        self.damage_inflicted = random(damage_inflicted + 3, damage_inflicted - 3)
-    
-    def set_status(self, durability, status):
-        if durability <= 0:
-            self.status = "{self} is broken"
-    
-"Rusty Sword" = Weapon("Rusty Sword", 20, damage_inflicted=10, status=None)
-"Regular Sword" = Weapon("Regular Sword", 50, damage_inflicted=20,status=None)
-"Rusty Axe" = Weapon("Rusty Axe", )
+
+    def set_damage_inflicted(self):
+        self.damage_inflicted = random.randint(self.damage_inflicted - 3, self.damage_inflicted + 3)
+
+    def set_status(self):
+        if self.durability <= 0:
+            self.status = f"{self.name} is broken"
+
+Rusty_Sword = Weapon("Rusty Sword", 20, 10)
+Regular_Sword = Weapon("Regular Sword", 50, 20)
+Rusty_Axe = Weapon("Rusty Axe", 15, 12)
 
 
 class Enemy(GameObject):
@@ -165,32 +185,45 @@ deku_kaminari = Enemy(
 )
 
 
-class Location(GameObject):
-    def __init__(self, exits, items, characters, currentPos):
-        self.exits = {}
-        self.items = []
-        self.characters = []
-
-        
-
-class NPCs:
-    def __init__(self, location, dialogue="none", health="50"):
-        self.location = location
+class NPC:
+    def __init__(self, name, location, dialogue="none", health=50, hostile=True):
+        self.name = name
         self.dialogue = dialogue
         self.health = health
-        
-    def talk (self, dialogue):
+        self.hostile = hostile
+
+    def talk(self):
         print(f"{self.name} says: {self.dialogue}")
-        
-        if Player = :
+
+    def attack(self, player):
+        if not self.hostile :
+            print(f"{self.name} doesn't seem interested in throwing hands.")
+            return
+
+        damage = 10
+        player.health -= damage
+        print(f"{self.name} attacks you for {damage} damage!!! Your health is now {player.health}.")
+        if player.health <= 8:
+            print("You have been defeated...rip")
+
+    def take_damage(self, amount, player):
+        self.health -= amount
+        print(f"You hit {self.name} for {amount} damage!!! Their health is now {self.health}.")
+        if self.health <= 0:
+            print(f"{self.name} has been murked!!!")
             
+            for  loc in World.values():
+                if self in loc["character"]:
+                    loc["character"].remove(self)
+                    break
+        else:
+            if self.hostile:
+                self.attack_player(player)
 
-
-
-# GAME LOOPPFUNCTIONS IMPROTNAT
+# GAME LOOP FUNCTIONS
 
 def parse_command(cmd, player):
-    words = cmd.lower().split() # splits input into action and description
+    words = cmd.lower().split()
 
     if len(words) == 0:
         return
@@ -206,6 +239,10 @@ def parse_command(cmd, player):
     if words[0] in ["look", "examine"]:
         player.look()
         return
+    
+    if words[0] in ["talk", "speak"]:
+        words[1].talk()
+        
 
 
       # Combat commands
@@ -228,20 +265,19 @@ def parse_command(cmd, player):
         return "quit"
 
     print("I don't understand that command.")
-        
+
 
 def game_loop():
     player = Player()
-    print("Welcome to the adventure. You are a women. We are feminists") # Starting Welcome message 
+    print("Welcome to the adventure. You are a woman. We are feminists")
     player.look()
 
     while True:
-        cmd = input("\nWhat do you do: ") # ask nfor input message
+        cmd = input("\nWhat do you do: ")
         if parse_command(cmd, player) == "quit":
             break
-            
-# MAIN GAME LOOP
+
 
 if __name__ == "__main__":
     game_loop()
-
+ 
