@@ -71,11 +71,36 @@ class Player:
         print(loc["description"])
         print("Exits:", ", ".join(loc["exits"].keys()))
 
-        if loc.get("character"):
-            print("You see:", ", ".join(loc["character"].keys()))
-            for npc in loc["character"]:
-                print(f" - {npc.name}")
+        if loc["enemies"]:
 
+    print("\nEnemies here:")
+    for enemy in loc["enemies"]:
+        print(f"- {enemy.name}")
+
+
+  # Handles combat between player and enemies
+    def fight(self, enemy_name):
+
+        loc = WORLD[self.currentPos]
+
+        for enemy in loc["enemies"]:
+
+            if enemy.name.lower() == enemy_name.lower():
+
+                damage = random.randint(5, 15)
+
+                dead = enemy.take_damage(damage)
+
+                if dead:
+                    loc["enemies"].remove(enemy)
+
+                else:
+                    enemy.attack(self)
+
+                return
+
+        print("That enemy is not here.")
+            
 
 class GameObject:
     def __init__(self, name, description):
@@ -113,26 +138,51 @@ Rusty_Axe = Weapon("Rusty Axe", 15, 12)
 
 
 class Enemy(GameObject):
-    def __init__(self, name, health, damage):
-        super().__init__(name, f"A dangerous {name}")
+   def __init__(self, name, description, health, damage):
+        super().__init__(name, description)
         self.health = health
         self.damage = damage
 
     def attack(self, player):
         print(f"The {self.name} attacks you for {self.damage} damage!")
+
         player.health -= self.damage
+        print(f"Your health is now {player.health}")
+
         if player.health <= 0:
             print("You have been defeated. Game over.")
             exit()
 
+    # Handles damage taken during combat
     def take_damage(self, damage):
         self.health -= damage
+
         print(f"You hit the {self.name} for {damage} damage!")
+
         if self.health <= 0:
             print(f"You have defeated the {self.name}!")
+            return True
+
+        return False
 
     def run_away(self):
         print(f"The {self.name} runs away!")
+
+
+# Enemy objects
+goomba = Enemy(
+    "Goomba",
+    "A tiny angry mushroom creature.",
+    30,
+    5
+)
+
+deku_kaminari = Enemy(
+    "Deku Kaminari",
+    "An electric forest creature.",
+    50,
+    10
+)
 
 
 class NPC:
@@ -194,6 +244,22 @@ def parse_command(cmd, player):
         words[1].talk()
         
 
+
+      # Combat commands
+    if words[0] in ["attack", "fight", "hit"]:
+
+        if len(words) < 2:
+            print("Attack what?")
+            return
+
+        enemy_name = " ".join(words[1:])
+
+        player.fight(enemy_name)
+
+        return
+
+    
+    # quit
     if words[0] in ["quit", "exit"]:
         print("Goodbye adventurer.")
         return "quit"
