@@ -1,2 +1,2 @@
 # the-zork-club
-the best text adventure game made ever forever and ever forever 
+the worst text adventure game made ever forever and ever forever 
